@@ -130,8 +130,8 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!68 &242395750
-EdgeCollider2D:
+--- !u!61 &242395750
+BoxCollider2D:
   m_ObjectHideFlags: 0
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
@@ -143,10 +143,18 @@ EdgeCollider2D:
   m_UsedByEffector: 0
   m_UsedByComposite: 0
   m_Offset: {x: 0, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0.049999997, y: 0.049999997, z: 0.049999997, w: 0.049999997}
+    pivot: {x: 0.5, y: 0.5}
+    oldSize: {x: 0.16, y: 0.16}
+    newSize: {x: 0.16, y: 0.16}
+    adaptiveTilingThreshold: 0.5
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  serializedVersion: 2
+  m_Size: {x: 0.16, y: 0.16}
   m_EdgeRadius: 0
-  m_Points:
-  - {x: -0.08, y: 0}
-  - {x: 0.08, y: 0}
 --- !u!212 &242395751
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -199,7 +207,7 @@ Transform:
   m_GameObject: {fileID: 242395749}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0.27276218, y: -0.1635671, z: -0.08369008}
-  m_LocalScale: {x: 25, y: 1, z: 1}
+  m_LocalScale: {x: 25, y: 5, z: 1}
   m_Children: []
   m_Father: {fileID: 664640471}
   m_RootOrder: 0
@@ -366,12 +374,12 @@ GameObject:
   serializedVersion: 5
   m_Component:
   - component: {fileID: 1052067269}
-  - component: {fileID: 1052067268}
   - component: {fileID: 1052067267}
   - component: {fileID: 1052067266}
   - component: {fileID: 1052067265}
+  - component: {fileID: 1052067268}
   m_Layer: 0
-  m_Name: TestPlayer
+  m_Name: Player
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -388,6 +396,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: df872b95064207847b56bc6afa0afedc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  gravity: -20
+  moveSpeed: 6
 --- !u!114 &1052067266
 MonoBehaviour:
   m_ObjectHideFlags: 0

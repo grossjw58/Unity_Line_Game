@@ -5,6 +5,8 @@ using UnityEngine;
 [RequireComponent(typeof(BoxCollider2D))]
 public class Controller2D : MonoBehaviour {
 
+	//global public variables
+	public CollisionInfo collisions;//consider changing to private if nothing outside this program can see it
 	//seralized global private variables to be edited in the inspector
 	[Tooltip("layers to include for collision detection of 2Dcontroller")]
 	[SerializeField] LayerMask collisionMask;
@@ -28,14 +30,13 @@ public class Controller2D : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 		collider=GetComponent<BoxCollider2D>();//get the collider from the gameobject
-		bounds = collider.bounds;//update the bounds of the object
-		bounds.Expand(skinWidth*-2);
 		CalculateRaySpacing();
 	}
 
 
 	public void Move(Vector3 _velocity){
 		UpdateRaycastOrigins();
+		collisions.Reset();
 		if(_velocity.x!=0){
 			HorizontalCollisions(ref _velocity);
 		}
@@ -66,17 +67,19 @@ public class Controller2D : MonoBehaviour {
 	void VerticalCollisions(ref Vector3 _velocity){
 		//detect verticle collisions (top and bottom) and adjust player position accordingly 
 		float directionY=Mathf.Sign(_velocity.y);//get the direction the player is moving vertically
-		float rayLength=Mathf.Abs(_velocity.y+skinWidth);//set the length of the collision dectection ray equal to the distance the player wants to move this frame
+		float rayLength=Mathf.Abs(_velocity.y)+skinWidth;//set the length of the collision dectection ray equal to the distance the player wants to move this frame
 		//loop through each of the raycast origins and cast a ray to check for colliions 
 		for (int i=0; i<verticalRayCount;i++){
-			Vector2 rayOrigin = (directionY==-1)?raycastOrigins.bottomLeft:raycastOrigins.topLeft;//determine which end (top vs bottom) to detect collisions from 
-			rayOrigin+=Vector2.right*(verticalRaySpacing*i+_velocity.x);
-			RaycastHit2D hit=Physics2D.Raycast(rayOrigin,Vector2.up*directionY,rayLength,collisionMask);
+			Vector2 rayOrigin = (directionY==-1)?raycastOrigins.bottomLeft:raycastOrigins.topLeft+Vector2.right*(verticalRaySpacing*i+_velocity.x);//determine which end (top vs bottom) to detect collisions from and calculate the length
+			RaycastHit2D hit=Physics2D.Raycast(rayOrigin,Vector2.up*directionY,rayLength,collisionMask);//send out the raycast
 			Debug.DrawRay(rayOrigin,Vector2.up*directionY*rayLength,Color.red);//debug statement may remove
-			//if a raycast hits anything change the movement distance accordinly and shorten the raylength to match that distance 
+			//if a raycast hits anything change the movement distance accordinly, shorten the raylength to match that distance, toggle the appropriate collision information
 			if(hit){
 				_velocity.y=(hit.distance-skinWidth)*directionY;
 				rayLength=hit.distance;
+				//update the the collision information 
+				collisions.below= directionY ==-1;
+				collisions.above= directionY ==1;
 			}
 		}
 	}
@@ -84,15 +87,18 @@ public class Controller2D : MonoBehaviour {
 	void HorizontalCollisions(ref Vector3 _velocity){
 		//detect horizontal collisions (left and right) and adjust player move distance accordingly for detailed comments see VerticalCollisions method
 		float directionX=Mathf.Sign(_velocity.x);
-		float rayLength=Mathf.Abs(_velocity.x+skinWidth);
+		float rayLength=Mathf.Abs(_velocity.x)+skinWidth;
 		for (int i=0; i<horizontalRayCount;i++){
-			Vector2 rayOrigin = (directionX==-1)?raycastOrigins.bottomLeft:raycastOrigins.bottomRight;
-			rayOrigin+=Vector2.up*(horizontalRaySpacing*i);
+			Vector2 rayOrigin = (directionX==-1)?raycastOrigins.bottomLeft:raycastOrigins.bottomRight+Vector2.up*(horizontalRaySpacing*i);
 			RaycastHit2D hit=Physics2D.Raycast(rayOrigin,Vector2.right*directionX,rayLength,collisionMask);
 			Debug.DrawRay(rayOrigin,Vector2.right*directionX*rayLength,Color.red);
 			if(hit){
 				_velocity.x=(hit.distance-skinWidth)*directionX;
 				rayLength=hit.distance;
+
+				collisions.left= directionX ==-1;
+				collisions.right= directionX ==1;
+
 			}
 		}
 	}
@@ -100,6 +106,16 @@ public class Controller2D : MonoBehaviour {
 	struct RaycastOrigins{
 		//a struct to hold the corners of the box collider
 		public Vector2 topLeft,topRight,bottomLeft,bottomRight;
+	}
+
+	public struct CollisionInfo{
+		//a struct to hold the information about which corners of the game object are currently colliding and a method to reset them
+		public bool above,below,left,right;
+
+		public void Reset(){
+			//reset all the collision tags 
+			above=below=left=right=false;
+		}
 	}
 
 }
