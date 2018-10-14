@@ -52,6 +52,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fc3a88efda8550b4faddb7e0da1f25f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  angleThreshold: 5
+  lineWidth: 0.1
+  tempPointPrefab: {fileID: 1104722911022806, guid: 7356b5a165b8d524f818bfd57de7931f,
+    type: 2}
 --- !u!120 &120197455576132836
 LineRenderer:
   m_ObjectHideFlags: 1

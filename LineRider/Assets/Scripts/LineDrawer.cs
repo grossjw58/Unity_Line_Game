@@ -46,6 +46,7 @@ public class LineDrawer : MonoBehaviour {
 		}
 		//mouse has been released...tell the instanced linePrefab game object it is done, set currentDrawTime to the drawWaitTime
 		else if(Input.GetMouseButtonUp(1)){
+			currentLine.AddVertex(mousePos);
 			currentLine.FinishLine();
 			currentDrawTime=timeToDraw;
 		}
