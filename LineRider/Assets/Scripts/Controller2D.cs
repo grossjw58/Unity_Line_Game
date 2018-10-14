@@ -22,7 +22,7 @@ public class Controller2D : MonoBehaviour {
 
 	//global private variables
 	Bounds bounds;//a reference to the bounds of the box collider
-	BoxCollider2D collider;//a reference to the box collider attached to this gameobject
+	new BoxCollider2D collider;//a reference to the box collider attached to this gameobject
 	float horizontalRaySpacing;//the spacing in world units between horizontal (front and back) raycasts
 	RaycastOrigins raycastOrigins;//a refernce to a raycastOrigins struct which contains vector2s representing the corners of the collider
 	float verticalRaySpacing;//the spacing in world units between vertical (top and bottom) raycasts
@@ -60,6 +60,8 @@ public class Controller2D : MonoBehaviour {
 
 	void CalculateRaySpacing(){
 		//calcualte the horizontal and vertical spacing between raycasts 
+		bounds = collider.bounds;
+		bounds.Expand(skinWidth*-2);
 		horizontalRaySpacing=bounds.size.y/(horizontalRayCount-1);
 		verticalRaySpacing=bounds.size.x/(verticalRayCount-1);
 	}
@@ -70,7 +72,7 @@ public class Controller2D : MonoBehaviour {
 		float rayLength=Mathf.Abs(_velocity.y)+skinWidth;//set the length of the collision dectection ray equal to the distance the player wants to move this frame
 		//loop through each of the raycast origins and cast a ray to check for colliions 
 		for (int i=0; i<verticalRayCount;i++){
-			Vector2 rayOrigin = (directionY==-1)?raycastOrigins.bottomLeft:raycastOrigins.topLeft+Vector2.right*(verticalRaySpacing*i+_velocity.x);//determine which end (top vs bottom) to detect collisions from and calculate the length
+			Vector2 rayOrigin = (directionY==-1)?raycastOrigins.bottomLeft+Vector2.right*(verticalRaySpacing*i+_velocity.x):raycastOrigins.topLeft+Vector2.right*(verticalRaySpacing*i+_velocity.x);//determine which end (top vs bottom) to detect collisions from and calculate the length
 			RaycastHit2D hit=Physics2D.Raycast(rayOrigin,Vector2.up*directionY,rayLength,collisionMask);//send out the raycast
 			Debug.DrawRay(rayOrigin,Vector2.up*directionY*rayLength,Color.red);//debug statement may remove
 			//if a raycast hits anything change the movement distance accordinly, shorten the raylength to match that distance, toggle the appropriate collision information
@@ -89,7 +91,7 @@ public class Controller2D : MonoBehaviour {
 		float directionX=Mathf.Sign(_velocity.x);
 		float rayLength=Mathf.Abs(_velocity.x)+skinWidth;
 		for (int i=0; i<horizontalRayCount;i++){
-			Vector2 rayOrigin = (directionX==-1)?raycastOrigins.bottomLeft:raycastOrigins.bottomRight+Vector2.up*(horizontalRaySpacing*i);
+			Vector2 rayOrigin = (directionX==-1)?raycastOrigins.bottomLeft+Vector2.up*(horizontalRaySpacing*i):raycastOrigins.bottomRight+Vector2.up*(horizontalRaySpacing*i);
 			RaycastHit2D hit=Physics2D.Raycast(rayOrigin,Vector2.right*directionX,rayLength,collisionMask);
 			Debug.DrawRay(rayOrigin,Vector2.right*directionX*rayLength,Color.red);
 			if(hit){

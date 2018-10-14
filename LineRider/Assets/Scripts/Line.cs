@@ -6,10 +6,9 @@ using System;
 [RequireComponent(typeof(LineRenderer))]
 public class Line : MonoBehaviour {
 	//seralized global private variables to be edited in the inspector
-	[SerializeField]float angleThreshold=5;
+
 	[SerializeField]float lineWidth=1;
 
-	[SerializeField]GameObject tempPointPrefab;
 
 	//gloabl private variables
 	LineRenderer lineRenderer;//a reference to the line rendere component
@@ -18,7 +17,7 @@ public class Line : MonoBehaviour {
 	// Use this for initialization
 	void Awake () {
 		lineRenderer=GetComponent<LineRenderer>();//access the line renderer
-		lineRenderer.startWidth=lineWidth;
+		lineRenderer.startWidth=lineWidth;//set the line width
 		lineRenderer.endWidth=lineWidth;
 	}
 
@@ -36,32 +35,40 @@ public class Line : MonoBehaviour {
 
 	void DrawLine(){
 		//set the vertex count for the line render and add the vertices to it
-		lineRenderer.SetVertexCount(verticies.Count);
+		lineRenderer.positionCount=verticies.Count;
 		lineRenderer.SetPositions(verticies.ToArray());
 	}
 
 	void SegmentLine(){
-		//add a new edge collider convert the vector3 vertices to vector2 then set the points for the edge collider
+		//check to make sure there are at least two points in the vertex array and then loop through the pairs of vertices and send them to DrawCollider
 		//check to make sure there are at least two points in the vertex array
 		if(verticies.Count>1){
+			//loop through the pairs of vertices and draw a box collider around them
 			for(int i=0;i<verticies.Count-2;i++){
 				DrawCollider(verticies[i],verticies[i+1]);
 			}
 		}
 	}
 	void DrawCollider(Vector3 _startPoint, Vector3 _endPoint){
+		//draw a box collider around two points in space
+		//calcualte the angle between the lines in degrees
 		float angle=Mathf.Atan2(_endPoint.y-_startPoint.y,_endPoint.x-_startPoint.x)*Mathf.Rad2Deg;
+		//get the mid point between the lines and set the position 
 		float midX=(_startPoint.x+_endPoint.x)/2;
 		float midy=(_startPoint.y+_endPoint.y)/2;
 		Vector3 position= new Vector3(midX,midy,0);
+		//get how long you want the line to be 
 		float lineLength=Vector3.Distance(_startPoint,_endPoint);
-		GameObject boxcol=new GameObject();
-		boxcol.transform.position=position;
-		boxcol.transform.rotation=Quaternion.Euler(new Vector3(0,0,angle));
-		boxcol.transform.SetParent(this.gameObject.transform);
-		boxcol.AddComponent<BoxCollider2D>();
-		BoxCollider2D bc= boxcol.GetComponent<BoxCollider2D>();
+		//create a new game object to hold the box collider, add the box collider to it
+		GameObject go=new GameObject();
+		go.AddComponent<BoxCollider2D>();
+		BoxCollider2D bc= go.GetComponent<BoxCollider2D>();
+		//set all its properties using the previously defined variables
+		go.transform.position=position;
+		go.transform.rotation=Quaternion.Euler(new Vector3(0,0,angle));
+		go.transform.SetParent(this.gameObject.transform);
 		bc.size=new Vector2(lineLength,lineWidth);
+		go.layer=8;//layer 8 is the obstacles layer used to define ground
 	}
 
 	public struct FindEndOut{
