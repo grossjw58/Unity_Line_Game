@@ -37,6 +37,7 @@ public class PlayerMotor : MonoBehaviour {
 		}
 		//get the input from the user and check for jumping 
 		Vector2 input = new Vector2(Input.GetAxisRaw("Horizontal"),Input.GetAxisRaw("Vertical"));
+
 		if(Input.GetKeyDown(KeyCode.Space)&&controller.collisions.below){
 			velocity.y=jumpVelocity;
 		}

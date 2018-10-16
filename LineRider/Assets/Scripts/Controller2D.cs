@@ -29,6 +29,8 @@ public class Controller2D : MonoBehaviour {
 	RaycastOrigins raycastOrigins;//a refernce to a raycastOrigins struct which contains vector2s representing the corners of the collider
 	float verticalRaySpacing;//the spacing in world units between vertical (top and bottom) raycasts
 
+
+	float maxDecendAngle=80f;
 	// Use this for initialization
 	void Start () {
 		collider=GetComponent<BoxCollider2D>();//get the collider from the gameobject
@@ -39,6 +41,9 @@ public class Controller2D : MonoBehaviour {
 	public void Move(Vector3 _velocity){
 		UpdateRaycastOrigins();
 		collisions.Reset();
+		if(_velocity.y<0){
+			DescendSlope(ref _velocity);
+		}
 		if(_velocity.x!=0){
 			HorizontalCollisions(ref _velocity);
 		}
@@ -53,8 +58,7 @@ public class Controller2D : MonoBehaviour {
 		float directionX=Mathf.Sign(_velocity.x);
 		float rayLength=Mathf.Abs(_velocity.x)+skinWidth;
 		for (int i=0; i<horizontalRayCount;i++){
-			Vector2 rayOrigin = (directionX==-1)?raycastOrigins.bottomLeft:raycastOrigins.bottomRight;
-			rayOrigin+=Vector2.up*(horizontalRaySpacing*i);
+			Vector2 rayOrigin = ((directionX==-1)?raycastOrigins.bottomLeft:raycastOrigins.bottomRight)+Vector2.up*(horizontalRaySpacing*i);
 			RaycastHit2D hit=Physics2D.Raycast(rayOrigin,Vector2.right*directionX,rayLength,collisionMask);
 			Debug.DrawRay(rayOrigin,Vector2.right*directionX*rayLength,Color.red);
 			if(hit){
@@ -90,8 +94,7 @@ public class Controller2D : MonoBehaviour {
 		float rayLength=Mathf.Abs(_velocity.y)+skinWidth;//set the length of the collision dectection ray equal to the distance the player wants to move this frame
 		//loop through each of the raycast origins and cast a ray to check for colliions 
 		for (int i=0; i<verticalRayCount;i++){
-			Vector2 rayOrigin = (directionY==-1)?raycastOrigins.bottomLeft:raycastOrigins.topLeft;//determine which end (top vs bottom) to detect collisions from and calculate the length
-			rayOrigin+=Vector2.right*(verticalRaySpacing*i+_velocity.x);
+			Vector2 rayOrigin = ((directionY==-1)?raycastOrigins.bottomLeft:raycastOrigins.topLeft)+Vector2.right*(verticalRaySpacing*i+_velocity.x);//determine which end (top vs bottom) to detect collisions from and calculate the length
 			RaycastHit2D hit=Physics2D.Raycast(rayOrigin,Vector2.up*directionY,rayLength,collisionMask);//send out the raycast
 			Debug.DrawRay(rayOrigin,Vector2.up*directionY*rayLength,Color.red);//debug statement may remove
 			//if a raycast hits anything change the movement distance accordinly, shorten the raylength to match that distance, toggle the appropriate collision information
@@ -106,6 +109,20 @@ public class Controller2D : MonoBehaviour {
 				//update the the collision information 
 				collisions.below= directionY ==-1;
 				collisions.above= directionY ==1;
+			}
+		}
+
+		if(collisions.climbingSlope){
+			float directionX=Mathf.Sign(_velocity.x);
+			rayLength=Mathf.Abs(_velocity.x+skinWidth);
+			Vector2 rayOrigin=((directionX==-1)?raycastOrigins.bottomLeft:raycastOrigins.bottomRight)+Vector2.up*_velocity.y;
+			RaycastHit2D hit=Physics2D.Raycast(rayOrigin,Vector2.right*directionX,rayLength,collisionMask);
+			if(hit){
+				float slopeAngle=Vector2.Angle(hit.normal,Vector2.up);
+				if(slopeAngle!=collisions.slopeAngle){
+					_velocity.x=hit.distance-skinWidth*directionX;
+					collisions.slopeAngle=slopeAngle;
+				}
 			}
 		}
 	}
@@ -123,6 +140,28 @@ public class Controller2D : MonoBehaviour {
 		}
 	}
 
+	void DescendSlope(ref Vector3 _velocity){
+		float directionX=Mathf.Sign(_velocity.x);
+		Vector2 rayOrigin=(directionX==-1)?raycastOrigins.bottomRight:raycastOrigins.bottomLeft;
+		RaycastHit2D hit = Physics2D.Raycast(rayOrigin,Vector2.up,Mathf.Infinity,collisionMask);
+		if(hit){
+			float slopeAngle=Vector2.Angle(hit.normal,Vector2.up);
+			if(slopeAngle!=0 && slopeAngle <=maxDecendAngle){
+				if(Mathf.Sign(hit.normal.x)==directionX){
+					if(hit.distance-skinWidth <= Mathf.Tan(slopeAngle*Mathf.Deg2Rad)*Mathf.Abs(_velocity.x)){
+						float moveDistance=Mathf.Abs(_velocity.x);
+						float descendVelocityY=Mathf.Sin(slopeAngle*Mathf.Deg2Rad)*moveDistance;
+						_velocity.x=Mathf.Cos(slopeAngle*Mathf.Deg2Rad)*moveDistance*Mathf.Sign(_velocity.x);
+						_velocity.y-=descendVelocityY;
+
+						collisions.slopeAngle=slopeAngle;
+						collisions.descendingSlope=true;
+						collisions.below=true;
+					}
+				}
+			}
+		}
+	}
 	void UpdateRaycastOrigins(){
 		//update bounds then update the current positions of the corners of the box collider based on those bounds
 		//update the bounds of the object
@@ -143,11 +182,6 @@ public class Controller2D : MonoBehaviour {
 		verticalRaySpacing=bounds.size.x/(verticalRayCount-1);
 	}
 
-
-
-
-
-
 	struct RaycastOrigins{
 		//a struct to hold the corners of the box collider
 		public Vector2 topLeft,topRight,bottomLeft,bottomRight;
@@ -155,14 +189,14 @@ public class Controller2D : MonoBehaviour {
 
 	public struct CollisionInfo{
 		//a struct to hold the information about which corners of the game object are currently colliding and a method to reset them
-		public bool above,below,left,right,climbingSlope;
+		public bool above,below,left,right,climbingSlope,descendingSlope;
 		public float slopeAngle,slopeAngleOld;
 
 
 		public void Reset(){
 			//reset all the collision tags 
 			above=below=left=right=false;
-			climbingSlope=false;
+			climbingSlope=descendingSlope=false;
 			slopeAngleOld=slopeAngle;
 			slopeAngle=0;
 		}
