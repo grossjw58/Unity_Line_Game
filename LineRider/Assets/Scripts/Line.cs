@@ -44,7 +44,7 @@ public class Line : MonoBehaviour {
 		//check to make sure there are at least two points in the vertex array
 		if(verticies.Count>1){
 			//loop through the pairs of vertices and draw a box collider around them
-			for(int i=0;i<verticies.Count-2;i++){
+			for(int i=0;i<verticies.Count-1;i++){
 				DrawCollider(verticies[i],verticies[i+1]);
 			}
 		}

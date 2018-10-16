@@ -13,6 +13,8 @@ public class Controller2D : MonoBehaviour {
 	[Tooltip("The number of rays to send out in the horizontal direction (front and back)")]
 	[Range(2,300)]
 	[SerializeField] int horizontalRayCount=4;
+	[Tooltip("The maximum angle in degrees the player should be able to freely accend or decend")]
+	[SerializeField]float maxClimbAngle=80f;
 	[Tooltip("The number of rays to send out in the vertical direction (top and bottom)")]
 	[Range(2,300)]
 	[SerializeField] int verticalRayCount=4;
@@ -46,6 +48,81 @@ public class Controller2D : MonoBehaviour {
 		transform.Translate(_velocity);
 	}
 
+	void HorizontalCollisions(ref Vector3 _velocity){
+		//detect horizontal collisions (left and right) and adjust player move distance accordingly for detailed comments see VerticalCollisions method
+		float directionX=Mathf.Sign(_velocity.x);
+		float rayLength=Mathf.Abs(_velocity.x)+skinWidth;
+		for (int i=0; i<horizontalRayCount;i++){
+			Vector2 rayOrigin = (directionX==-1)?raycastOrigins.bottomLeft:raycastOrigins.bottomRight;
+			rayOrigin+=Vector2.up*(horizontalRaySpacing*i);
+			RaycastHit2D hit=Physics2D.Raycast(rayOrigin,Vector2.right*directionX,rayLength,collisionMask);
+			Debug.DrawRay(rayOrigin,Vector2.right*directionX*rayLength,Color.red);
+			if(hit){
+				//check to see if the player is climbing a slope
+				float slopeAngle=Vector2.Angle(hit.normal,Vector2.up);
+				//only get the slope information if you are checking the bottom most raycast with respect to the ground
+				if(i==0 && slopeAngle<=maxClimbAngle){
+					float distanceToSlopeStart=0;
+					if(slopeAngle !=collisions.slopeAngleOld){
+						distanceToSlopeStart=hit.distance-skinWidth;
+						_velocity.x-=distanceToSlopeStart*directionX;
+					}
+					ClimbSlope(ref _velocity,slopeAngle);
+					_velocity.x+=distanceToSlopeStart*directionX;
+				}
+				//if you are not currently climbing a slope or the slope angle you are on is greater than your maximum climbing slope move as descreibed in vertical collisions 
+				if(!collisions.climbingSlope || slopeAngle>maxClimbAngle){
+					_velocity.x=(hit.distance-skinWidth)*directionX;
+					rayLength=hit.distance;
+					if(collisions.climbingSlope){
+						_velocity.y=Mathf.Tan(collisions.slopeAngle*Mathf.Deg2Rad)*Mathf.Abs(_velocity.x);
+					}
+					collisions.left= directionX ==-1;
+					collisions.right= directionX ==1;
+				}
+			}
+		}
+	}
+
+	void VerticalCollisions(ref Vector3 _velocity){
+		//detect verticle collisions (top and bottom) and adjust player position accordingly 
+		float directionY=Mathf.Sign(_velocity.y);//get the direction the player is moving vertically
+		float rayLength=Mathf.Abs(_velocity.y)+skinWidth;//set the length of the collision dectection ray equal to the distance the player wants to move this frame
+		//loop through each of the raycast origins and cast a ray to check for colliions 
+		for (int i=0; i<verticalRayCount;i++){
+			Vector2 rayOrigin = (directionY==-1)?raycastOrigins.bottomLeft:raycastOrigins.topLeft;//determine which end (top vs bottom) to detect collisions from and calculate the length
+			rayOrigin+=Vector2.right*(verticalRaySpacing*i+_velocity.x);
+			RaycastHit2D hit=Physics2D.Raycast(rayOrigin,Vector2.up*directionY,rayLength,collisionMask);//send out the raycast
+			Debug.DrawRay(rayOrigin,Vector2.up*directionY*rayLength,Color.red);//debug statement may remove
+			//if a raycast hits anything change the movement distance accordinly, shorten the raylength to match that distance, toggle the appropriate collision information
+			if(hit){
+				_velocity.y=(hit.distance-skinWidth)*directionY;
+				rayLength=hit.distance;
+				//if the player is moving up a slope and hits an obstacle above them adjust the x velocity accordingly to stop the player from jittering 
+				if(collisions.climbingSlope){
+					Debug.Log("it is climbing a slope");
+					_velocity.x=_velocity.y/Mathf.Tan(collisions.slopeAngle*Mathf.Deg2Rad)*Mathf.Sign(_velocity.x);
+				}
+				//update the the collision information 
+				collisions.below= directionY ==-1;
+				collisions.above= directionY ==1;
+			}
+		}
+	}
+
+	void ClimbSlope(ref Vector3 _velocity, float _slopeAngle){
+		//This method calcualtes the the x and y components of a vector used to move the player up a slope 
+		float moveDistance=Mathf.Abs(_velocity.x);
+		float climbVelocityY=Mathf.Sin(_slopeAngle*Mathf.Deg2Rad)*moveDistance;
+		if(_velocity.y<=climbVelocityY){
+			_velocity.y=climbVelocityY;
+			_velocity.x=Mathf.Cos(_slopeAngle*Mathf.Deg2Rad)*moveDistance*Mathf.Sign(_velocity.x);
+			collisions.below=true;
+			collisions.climbingSlope=true;
+			collisions.slopeAngle=_slopeAngle;
+		}
+	}
+
 	void UpdateRaycastOrigins(){
 		//update bounds then update the current positions of the corners of the box collider based on those bounds
 		//update the bounds of the object
@@ -66,44 +143,10 @@ public class Controller2D : MonoBehaviour {
 		verticalRaySpacing=bounds.size.x/(verticalRayCount-1);
 	}
 
-	void VerticalCollisions(ref Vector3 _velocity){
-		//detect verticle collisions (top and bottom) and adjust player position accordingly 
-		float directionY=Mathf.Sign(_velocity.y);//get the direction the player is moving vertically
-		float rayLength=Mathf.Abs(_velocity.y)+skinWidth;//set the length of the collision dectection ray equal to the distance the player wants to move this frame
-		//loop through each of the raycast origins and cast a ray to check for colliions 
-		for (int i=0; i<verticalRayCount;i++){
-			Vector2 rayOrigin = (directionY==-1)?raycastOrigins.bottomLeft+Vector2.right*(verticalRaySpacing*i+_velocity.x):raycastOrigins.topLeft+Vector2.right*(verticalRaySpacing*i+_velocity.x);//determine which end (top vs bottom) to detect collisions from and calculate the length
-			RaycastHit2D hit=Physics2D.Raycast(rayOrigin,Vector2.up*directionY,rayLength,collisionMask);//send out the raycast
-			Debug.DrawRay(rayOrigin,Vector2.up*directionY*rayLength,Color.red);//debug statement may remove
-			//if a raycast hits anything change the movement distance accordinly, shorten the raylength to match that distance, toggle the appropriate collision information
-			if(hit){
-				_velocity.y=(hit.distance-skinWidth)*directionY;
-				rayLength=hit.distance;
-				//update the the collision information 
-				collisions.below= directionY ==-1;
-				collisions.above= directionY ==1;
-			}
-		}
-	}
 
-	void HorizontalCollisions(ref Vector3 _velocity){
-		//detect horizontal collisions (left and right) and adjust player move distance accordingly for detailed comments see VerticalCollisions method
-		float directionX=Mathf.Sign(_velocity.x);
-		float rayLength=Mathf.Abs(_velocity.x)+skinWidth;
-		for (int i=0; i<horizontalRayCount;i++){
-			Vector2 rayOrigin = (directionX==-1)?raycastOrigins.bottomLeft+Vector2.up*(horizontalRaySpacing*i):raycastOrigins.bottomRight+Vector2.up*(horizontalRaySpacing*i);
-			RaycastHit2D hit=Physics2D.Raycast(rayOrigin,Vector2.right*directionX,rayLength,collisionMask);
-			Debug.DrawRay(rayOrigin,Vector2.right*directionX*rayLength,Color.red);
-			if(hit){
-				_velocity.x=(hit.distance-skinWidth)*directionX;
-				rayLength=hit.distance;
 
-				collisions.left= directionX ==-1;
-				collisions.right= directionX ==1;
 
-			}
-		}
-	}
+
 
 	struct RaycastOrigins{
 		//a struct to hold the corners of the box collider
@@ -112,11 +155,16 @@ public class Controller2D : MonoBehaviour {
 
 	public struct CollisionInfo{
 		//a struct to hold the information about which corners of the game object are currently colliding and a method to reset them
-		public bool above,below,left,right;
+		public bool above,below,left,right,climbingSlope;
+		public float slopeAngle,slopeAngleOld;
+
 
 		public void Reset(){
 			//reset all the collision tags 
 			above=below=left=right=false;
+			climbingSlope=false;
+			slopeAngleOld=slopeAngle;
+			slopeAngle=0;
 		}
 	}
 
